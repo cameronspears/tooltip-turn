@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>tooltip-turn demo</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fff;
+        --text: #222;
+        --muted: #777;
+        --rule: #e6e6e6;
+        --code: #f6f6f6;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111;
+          --text: #ddd;
+          --muted: #888;
+          --rule: #2a2a2a;
+          --code: #1a1a1a;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 17px/1.65 system-ui, sans-serif;
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 48px 20px 160px;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 17px;
+        margin: 40px 0 8px;
+      }
+      p {
+        margin: 0 0 16px;
+      }
+      a {
+        color: inherit;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      ol li {
+        margin-bottom: 8px;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        /* Room for a tooltip under the row, so it never covers the next label. */
+        margin: 0 0 56px;
+      }
+      .toolbar button {
+        min-width: 40px;
+        height: 34px;
+        margin: 0 -1px -1px 0;
+        padding: 0 10px;
+        font: 15px ui-monospace, Menlo, monospace;
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--rule);
+        cursor: pointer;
+      }
+      .toolbar button:hover {
+        background: var(--code);
+      }
+      .tip {
+        position: fixed;
+        top: 0;
+        left: 0;
+        padding: 2px 7px;
+        font-size: 13px;
+        white-space: pre;
+        background: var(--text);
+        color: var(--bg);
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>tooltip-turn</h1>
+      <p class="muted">
+        Rest the mouse on a button in the first row until its tooltip shows, then slide along the
+        row. Do the same in the second row and compare.
+        <a href="https://github.com/cameronspears/tooltip-turn">Source on GitHub</a>.
+      </p>
+
+      <p class="muted">With tooltip-turn</p>
+      <div class="toolbar" data-kind="turn"></div>
+
+      <p class="muted">Without tooltip-turn (each tooltip waits on its own)</p>
+      <div class="toolbar" data-kind="alone"></div>
+
+      <h2>Things to notice</h2>
+      <ol>
+        <li>
+          In the first row, the first tooltip waits 400 ms. After that, each one opens as soon as
+          you reach its button, and the last one goes. There is never more than one.
+        </li>
+        <li>
+          Sweep the mouse quickly across the first row from outside it. Nothing opens, because each
+          new button starts the wait again.
+        </li>
+        <li>Move off the row for half a second, then come back. The first tooltip waits again.</li>
+        <li>
+          Click the button you're resting on, tap one on a phone, or Tab to one. It opens straight
+          away. Tap it again, press Escape, or tap somewhere else to close it.
+        </li>
+        <li>In the second row, every tooltip waits, so sliding along it is slow.</li>
+      </ol>
+
+      <h2>Why</h2>
+      <p>
+        I wanted tooltips to take turns the way they do on a Mac. Only one shows at a time. The
+        first one waits a moment, so a mouse passing over a toolbar doesn't set them all off. Once
+        one is open, you're reading them, so the next opens at once. A click, a tap or a key never
+        waits, because you asked for the tooltip.
+      </p>
+      <p>
+        The wait lives in tooltip-turn, not in the tooltips. These ones are a few lines of plain
+        JavaScript, and it works the same with a tooltip library, as long as the library's own
+        delay is 0.
+      </p>
+    </main>
+
+    <script type="module">
+      import { createTooltipTurn, DEFAULT_COLD_DELAY_MS } from '../dist/index.js';
+
+      const BUTTONS = [
+        ['B', 'Bold  ⌘B'],
+        ['I', 'Italic  ⌘I'],
+        ['U', 'Underline  ⌘U'],
+        ['S', 'Strikethrough'],
+        ['“”', 'Quote'],
+        ['</>', 'Code'],
+        ['#', 'Heading'],
+        ['↶', 'Undo  ⌘Z'],
+        ['↷', 'Redo  ⇧⌘Z'],
+      ];
+
+      // Below the button, or above it if there's no room, always inside the window.
+      function place(button, tip) {
+        const gap = 6;
+        const margin = 8;
+        const b = button.getBoundingClientRect();
+        let top = b.bottom + gap;
+        if (top + tip.offsetHeight > innerHeight - margin) top = b.top - gap - tip.offsetHeight;
+        const left = Math.min(
+          Math.max(b.left + b.width / 2 - tip.offsetWidth / 2, margin),
+          innerWidth - tip.offsetWidth - margin,
+        );
+        tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+      }
+
+      function show(button, tip, on) {
+        tip.hidden = !on;
+        if (on) place(button, tip);
+      }
+
+      function build(toolbar) {
+        return BUTTONS.map(([text, label], i) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = text;
+          button.setAttribute('aria-label', label.split('  ')[0]);
+          const tip = document.createElement('div');
+          tip.className = 'tip';
+          tip.role = 'tooltip';
+          tip.id = `${toolbar.dataset.kind}-${i}`;
+          tip.textContent = label;
+          tip.hidden = true;
+          button.setAttribute('aria-describedby', tip.id);
+          document.body.append(tip);
+          toolbar.append(button);
+          return [button, tip];
+        });
+      }
+
+      // Without: every tooltip runs its own timer, and nothing ties them together.
+      for (const [button, tip] of build(document.querySelector('[data-kind="alone"]'))) {
+        let timer = 0;
+        button.addEventListener('pointerenter', () => {
+          timer = setTimeout(() => show(button, tip, true), DEFAULT_COLD_DELAY_MS);
+        });
+        button.addEventListener('pointerleave', () => {
+          clearTimeout(timer);
+          show(button, tip, false);
+        });
+        button.addEventListener('focus', () => show(button, tip, true));
+        button.addEventListener('blur', () => show(button, tip, false));
+      }
+
+      // With: the same tooltips, taking turns through one store.
+      const turn = createTooltipTurn();
+      const pairs = build(document.querySelector('[data-kind="turn"]'));
+      const tipFor = new Map(pairs);
+      for (const [button] of pairs) {
+        button.addEventListener('pointerenter', (e) => e.pointerType === 'mouse' && turn.ask(button, button));
+        button.addEventListener('pointerleave', (e) => e.pointerType === 'mouse' && turn.leave(button));
+        // A tap toggles, and never waits.
+        button.addEventListener('pointerdown', (e) => {
+          if (e.pointerType === 'mouse') return;
+          if (turn.stage(button).startsWith('open')) turn.leave(button);
+          else turn.ask(button, button, { hover: false });
+        });
+        button.addEventListener('focus', () => turn.ask(button, button));
+        button.addEventListener('blur', () => turn.leave(button));
+      }
+
+      const openButton = () => {
+        const s = turn.getState();
+        return s.status === 'open' ? s.owner : null;
+      };
+      addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && openButton()) turn.leave(openButton());
+      });
+      addEventListener(
+        'pointerdown',
+        (e) => {
+          const open = openButton();
+          if (open && !open.contains(e.target)) turn.leave(open);
+        },
+        true,
+      );
+
+      turn.subscribe(() => {
+        for (const [button, tip] of pairs) show(button, tip, turn.stage(button).startsWith('open'));
+      });
+
+      const placeOpen = () => {
+        const open = openButton();
+        if (open) place(open, tipFor.get(open));
+      };
+      addEventListener('resize', placeOpen);
+      addEventListener('scroll', placeOpen, { passive: true });
+    </script>
+  </body>
+</html>

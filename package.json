@@ -1,0 +1,73 @@
+{
+  "name": "tooltip-turn",
+  "version": "0.1.0",
+  "description": "One tooltip on the page at a time, as on a Mac: the first waits, the next opens at once.",
+  "license": "MIT",
+  "author": "Cameron Spears",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cameronspears/tooltip-turn.git"
+  },
+  "homepage": "https://github.com/cameronspears/tooltip-turn#readme",
+  "bugs": {
+    "url": "https://github.com/cameronspears/tooltip-turn/issues"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "default": "./dist/react.js"
+    }
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "demo": "pnpm build && python3 -m http.server 4173"
+  },
+  "keywords": [
+    "tooltip",
+    "hover",
+    "delay",
+    "hover-intent",
+    "macos",
+    "react",
+    "hook",
+    "react-tooltip",
+    "floating-ui"
+  ],
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^27.4.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
+  },
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.26.0"
+}
